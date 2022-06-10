@@ -1,63 +1,103 @@
-<?php 
- 
-include 'config.php';
- 
-error_reporting(0);
- 
+<?php
+//Mengirimkan Token Keamanan Ajax Request (Csrf Token)
 session_start();
- 
-if (isset($_SESSION['username'])) {
-    header("Location: berhasil_login.php");
+if (empty($_SESSION['csrf_token'])) {
+  $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
- 
-if (isset($_POST['submit'])) {
-    $email = $_POST['email'];
-    $password = md5($_POST['password']);
- 
-    $sql = "SELECT * FROM users WHERE email='$email' AND password='$password'";
-    $result = mysqli_query($conn, $sql);
-    if ($result->num_rows > 0) {
-        $row = mysqli_fetch_assoc($result);
-        $_SESSION['username'] = $row['username'];
-        header("Location: berhasil_login.php");
-    } else {
-        echo "<script>alert('Email atau password Anda salah. Silahkan coba lagi!')</script>";
-    }
-}
- 
 ?>
- 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
- 
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
- 
-    <link rel="stylesheet" type="text/css" href="style.css">
- 
-    <title>Niagahoster Tutorial</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <link rel="icon" href="images/dk.png">
+	<title>Dewan Demo Form Komentar</title>
+	<!-- Csrf Token -->
+	<meta name="csrf-token" content="<?= $_SESSION['csrf_token'] ?>">
+	<link rel="stylesheet" href="css/bootstrap.min.css">
 </head>
 <body>
-    <div class="alert alert-warning" role="alert">
-        <?php echo $_SESSION['error']?>
-    </div>
- 
-    <div class="container">
-        <form action="" method="POST" class="login-email">
-            <p class="login-text" style="font-size: 2rem; font-weight: 800;">Login</p>
-            <div class="input-group">
-                <input type="email" placeholder="Email" name="email" value="<?php echo $email; ?>" required>
-            </div>
-            <div class="input-group">
-                <input type="password" placeholder="Password" name="password" value="<?php echo $_POST['password']; ?>" required>
-            </div>
-            <div class="input-group">
-                <button name="submit" class="btn">Login</button>
-            </div>
-            <p class="login-register-text">Anda belum punya akun? <a href="register.php">Register</a></p>
-        </form>
-    </div>
+	<nav class="navbar navbar-dark bg-danger fixed-top">
+	  <a class="navbar-brand" href="index.php" style="color: #fff;">
+	    Dewan Komputer
+	  </a>
+	</nav>
+
+	<div class="container mb-3">
+		<h2 align="center" style="margin: 60px 10px 10px 10px;">Contoh Komentar PHP Ajax</h2><hr>
+		<form method="POST" id="form_komen" action="cek.php">
+			<div class="form-group">
+				<input type="text" name="nama_pengirim" id="nama_pengirim" class="form-control" placeholder="Masukkan Nama" />
+			</div>
+			<div class="form-group">
+				<textarea name="komen" id="komen" class="form-control" placeholder="Tulis Komentar" rows="5"></textarea>
+			</div>
+			<div class="form-group">
+				<input type="hidden" name="komentar_id" id="komentar_id" value="0" />
+				<input type="submit" name="submit" id="submit" class="btn btn-info" value="Submit" />
+			</div>
+		</form>
+		<hr>
+		<h4 class="mb-3">Komentar :</h4>
+		<span id="message"></span>
+	   
+	   	<div id="display_comment"></div>
+	</div>
+
+	<div class="navbar bg-dark">
+		<div style="color: #fff;">© <?php echo date('Y'); ?> Copyright:
+		    <a href="https://dewankomputer.com/"> Dewan Komputer</a>
+		</div>
+	</div>
+
+	<script src="js/jquery.min.js"></script>
+	<script>
+		$(document).ready(function(){
+			//Mengirimkan Token Keamanan
+			$.ajaxSetup({
+	            headers : {
+	                'Csrf-Token': $('meta[name="csrf-token"]').attr('content')
+	            }
+	        });
+        
+			$('#form_komen').on('submit', function(event){
+				event.preventDefault();
+				var form_data = $(this).serialize();
+				$.ajax({
+					url:"tambah_komentar.php",
+					method:"POST",
+					data:form_data,
+					success:function(data){
+						$('#form_komen')[0].reset();
+						$('#komentar_id').val('0');
+						load_comment();
+					}, error: function(data) {
+		            	console.log(data.responseText)
+		            }
+				})
+			});
+
+			load_comment();
+
+			function load_comment(){
+				$.ajax({
+					url:"ambil_komentar.php",
+					method:"POST",
+					success:function(data){
+						$('#display_comment').html(data);
+					}, error: function(data) {
+		            	console.log(data.responseText)
+		            }
+				})
+			}
+
+			$(document).on('click', '.reply', function(){
+				var komentar_id = $(this).attr("id");
+				$('#komentar_id').val(komentar_id);
+				$('#nama_pengirim').focus();
+			});
+		});
+	</script>
 </body>
 </html>
